@@ -1,25 +1,11 @@
 import os
 import tarfile
 
-import numpy as np
+import cv2
+import tensorflow as tf
 from PIL import Image
 
-import tensorflow as tf
-from extraction.extractor import FeatureExtractor
-import cv2
-
-colormap = np.zeros((256, 3), dtype=int)
-ind = np.arange(256, dtype=int)
-
-
-def bit_get(val, idx):
-    return (val >> idx) & 1
-
-
-for shift in reversed(range(8)):
-    for channel in range(3):
-        colormap[:, channel] |= bit_get(ind, channel) << shift
-    ind >>= 3
+from extraction.extractor import *
 
 
 class DeepLabModel(object):
@@ -116,11 +102,16 @@ class DeepExtractor:
 
         filtered = [kp for kp in candidates if segmented[int(kp[1]), int(kp[0])] in non_moving_labels]
 
+        self.debug(frame, filtered, segmented)
+        return np.array(filtered)
+
+    def debug(self, frame, filtered, segmented_upscaled):
         display = frame.copy()
         [cv2.circle(display, tuple(pt), 2, color=(0, 255, 0)) for pt in filtered]
-        cv2.imshow('Filtered', display)
+        map = range(0, 255, 10)
+
+        montage = cv2.addWeighted(display, 1, np.asarray(map)[segmented_upscaled].astype(np.uint8), 0.4, 0)
+        cv2.imshow('Filtered', montage)
 
         cv2.waitKey(1)
         cv2.waitKey(1)
-
-        return np.array(filtered)
